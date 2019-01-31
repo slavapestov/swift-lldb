@@ -2415,6 +2415,28 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     if (type_info.AnySet(eTypeIsClass))
       success = GetDynamicTypeAndAddress_Class(in_value, *scratch_ctx, use_dynamic,
                                                class_type_or_name, address);
+    if (type_info.AnySet(eTypeIsProtocol)) {
+      lldb::addr_t existential_address = in_value.GetAddressOf();
+      if (!existential_address || existential_address == LLDB_INVALID_ADDRESS)
+        return false;
+      auto &target = m_process->GetTarget();
+      assert(IsScratchContextLocked(target) &&
+             "Swift scratch context not locked ahead");
+      auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+      swift::remote::RemoteAddress remote_existential(existential_address);
+      auto result = remote_ast.getDynamicTypeAndAddressForExistential(
+          remote_existential, GetSwiftType(bound_type));
+      if (!result.isSuccess())
+        return false;
+      auto type_and_address = result.getValue();
+      CompilerType dynamic_type(type_and_address.first);
+      class_type_or_name.SetCompilerType(dynamic_type);
+      address.SetLoadAddress(type_and_address.second.getAddressData(),
+                             &m_process->GetTarget());
+
+      success = true;
+    }
+
     else
       success = GetDynamicTypeAndAddress_Value(in_value, bound_type, use_dynamic,
                                                class_type_or_name, address);
