@@ -13,13 +13,17 @@ class C {}
 class D : C {}
 protocol P {}
 
-func main<T>(_ x: T) {
-  var s = String.self
-  var c = D.self
-  var t = type(of: (1,2,"hello"))
-  var p = P.self
-  var f = T.self
-  print("Set breakpoint here")
+func concrete() {
+  var s = String.self //% self.expect("frame var s", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["String"])
+  var c = D.self //% self.expect("frame var c", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["a.D"])
+  var t = type(of: (1,2,"hello")) //% self.expect("frame var t", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["(Int, Int, String)"])
+  var p = P.self //% self.expect("frame var p", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["P"])
 }
 
-main() { (x:Int) -> Int in return x }
+func generic<T, U>(_ t: T, _ u: U.Type) {
+  var f = T.self //% self.expect("frame var f", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["(Int) -> Int"])
+  var g = u //% self.expect("frame var g", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["[String]"])
+}
+
+concrete()
+generic({ (x:Int) -> Int in return x }, [String].self)
